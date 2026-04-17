@@ -21,6 +21,7 @@
 
 import os
 import uuid
+from chromadb.config import Settings
 from datetime import datetime
 from typing import Optional
 
@@ -31,14 +32,14 @@ import chromadb
 from sentence_transformers import SentenceTransformer
 
 # ── Config ──────────────────────────────────────────────────────
-CHROMA_PATH       = "./data/chroma_db"
+CHROMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "chroma_db")
 COLLECTION_NAME   = "episodic_memory"
 EMBEDDING_MODEL   = "all-MiniLM-L6-v2"
 DEFAULT_TOP_K     = 5
 SIMILARITY_THRESHOLD = 0.25   # lowered slightly so distant-but-relevant
                                # memories still get retrieved
 
-# Shared embedding model — loaded once, cached forever
+# Shared embedding model— loaded once, cached forever
 _embedding_model: Optional[SentenceTransformer] = None
 
 

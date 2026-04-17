@@ -30,7 +30,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-CHROMA_PATH = "./data/chroma_db"
+CHROMA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "chroma_db")
 MEMORY_PATH = "data/working_memory.json"
 
 # Seconds to wait between conversation turns to avoid rate limits.
