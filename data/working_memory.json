@@ -1,12 +1,49 @@
 {
   "facts": {
-    "critical": [],
+    "critical": [
+      {
+        "key": "budget_maximum",
+        "value": "total trip budget is $3000",
+        "category": "constraint",
+        "priority": "critical",
+        "added_at_turn": 1
+      },
+      {
+        "key": "allergy_shellfish",
+        "value": "severely allergic to shellfish \u2014 medical requirement",
+        "category": "constraint",
+        "priority": "critical",
+        "added_at_turn": 1
+      }
+    ],
     "important": [],
-    "contextual": []
+    "contextual": [
+      {
+        "key": "trip_duration",
+        "value": "5-day trip",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 1
+      },
+      {
+        "key": "search_location",
+        "value": "Tokyo",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 3
+      },
+      {
+        "key": "destination_primary",
+        "value": "Kyoto",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 4
+      }
+    ]
   },
   "decisions": [],
   "cancelled": [],
-  "turn_count": 0,
+  "turn_count": 5,
   "conversation_id": "",
-  "last_updated": ""
+  "last_updated": "2026-04-17T20:10:06.974227"
 }

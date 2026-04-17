@@ -3,7 +3,11 @@
 
 import sys
 import time
-sys.path.append('.')
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from travel_agent.baseline_agent import BaselineAgent
 from travel_agent.agent import CCMAgent
