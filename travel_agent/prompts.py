@@ -43,89 +43,111 @@ Extract facts that:
   ✓ Constrain or filter future recommendations
   ✓ Express a durable preference or requirement
   ✓ Record a confirmed decision or commitment
-  ✓ Provide background context that affects future responses
   ✓ Would cause a WRONG response if the agent forgot them
 
 Do NOT extract:
   ✗ Greetings and small talk
-  ✗ Questions the user is asking (not statements about themselves)
-  ✗ Hypotheticals ("what if we did X" — not a decision)
-  ✗ Temporary or throwaway comments
-  ✗ Facts already present in current memory (check below)
-  ✗ Information from the agent's responses — only user statements
+  ✗ Questions the user is asking (statements about what they WANT
+    to find, not statements about themselves)
+  ✗ Hypotheticals ("what if we did X")
+  ✗ Facts already in current memory with same meaning
+  ✗ Location queries as destination updates
+    ("find hotels in Shinjuku" → Shinjuku is a search location,
+     NOT a new destination replacing Tokyo/Kyoto)
+  ✗ Neighborhood or district names as primary destinations
+    (Shinjuku, Tsukiji, Montmartre, etc. are areas within cities)
+  ✗ Search queries mentioned by the user as questions
+    ("find me flights to X" → X is the search target, not a
+     new fact about the user to store permanently)
+  ✗ Anything from the agent's previous responses — only from
+    the user's own statements about themselves
+    
+KEY RULE: Only extract facts that are statements about the USER
+  (their constraints, preferences, confirmed decisions).
+  Do NOT extract facts about what they are SEARCHING FOR.
+  
+  WRONG: "Find hotels in Shinjuku" → destination = Shinjuku
+  RIGHT: No extraction (this is a search query, not a user fact)
+  
+  WRONG: "Find restaurants near Tsukiji" → destination = Tsukiji
+  RIGHT: No extraction (this is a search query)
+  
+  RIGHT: "I want to visit Tokyo and Kyoto" → destination = Tokyo and Kyoto
+  RIGHT: "My budget is $3000" → budget_maximum = $3000
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-PRIORITY CLASSIFICATION RULES
+PRIORITY CLASSIFICATION — READ CAREFULLY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-CRITICAL — Assign this when:
-  • Ignoring this fact would cause harm or a serious mistake
-  • It is a hard limit with no exceptions
-  • It is a safety, health, or legal constraint
-  • It is an absolute budget or time deadline
-  → Always injected into every prompt. Never dropped.
+CRITICAL — use when ALL of these are true:
+  • Ignoring this fact would cause serious harm or a major mistake
+  • The user stated it as a hard limit or absolute requirement
+  • It has no exceptions ("maximum", "must", "never", "always",
+    "severe", "I cannot", "I must not", "required")
+  
+  Ask yourself: "If the agent forgot this one fact,
+  would the response be seriously wrong or harmful?"
+  If YES → critical
 
-IMPORTANT — Assign this when:
-  • Ignoring this fact would produce a noticeably worse response
-  • It is a strong preference that should filter most recommendations
-  • It is a confirmed decision that affects future planning
-  • It represents a significant commitment (booked, paid, confirmed)
-  → Usually injected. May be retrieved by RAG when relevant.
+IMPORTANT — use when:
+  • Forgetting this produces a noticeably worse response
+  • It is a strong preference but not life-or-death
+  • It is a confirmed decision or booking
+  
+  Ask yourself: "Does this meaningfully shape recommendations?"
+  If YES → important
 
-CONTEXTUAL — Assign this when:
-  • It is useful background but not decision-critical
-  • It is a soft preference that applies in specific situations
-  • It is general information about the user's situation
-  → Stored for RAG retrieval. Not always injected.
+CONTEXTUAL — use when:
+  • Useful background but not decision-critical
+  • Soft preference that applies only sometimes
+  • General information about the user's situation
+  
+  When in doubt between important and contextual → use important
+  When in doubt between critical and important → use important
+  Only use critical when the fact is clearly a hard constraint
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+VALUE REQUIREMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Values MUST be complete self-contained statements.
+A value must make sense when read completely alone.
+
+BAD (incomplete):
+  "severe allergy"     ← allergy to WHAT?
+  "3000"               ← 3000 what?
+  "Shinjuku area"      ← what about it?
+  "relaxed"            ← relaxed what?
+
+GOOD (complete):
+  "severely allergic to shellfish"
+  "maximum total trip budget is $3000"
+  "prefers a relaxed pace with maximum 2 activities per day"
+  "destination cities are Tokyo and Kyoto"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 KEY NAMING CONVENTION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-VALUE REQUIREMENTS:
-  Values must be complete, self-contained statements.
-  A value should make sense read completely alone.
-  
-  BAD values (incomplete):
-    "severe allergy"  ← allergy to WHAT?
-    "3000"            ← 3000 what?
-    "Shinjuku area"   ← what about Shinjuku?
-  
-  GOOD values (complete):
-    "severely allergic to shellfish"
-    "total trip budget is $3000 USD"
-    "prefers hotels in Shinjuku area of Tokyo"
-    
-  Also: Do NOT extract neighborhood names as destination overrides.
-  Shinjuku, Shibuya, Montmartre are neighborhoods, not destinations.
-  Only extract city-level or country-level destinations.
+Keys must be snake_case, 2-4 words, descriptive.
+Same concept must use same key across all turns.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-HANDLING UPDATES AND CORRECTIONS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-If the user corrects or updates a fact already in memory:
-  • Use the SAME key as the existing fact
-  • Provide the NEW value
-  • The memory system will update it automatically
-
-If the user adds to an existing list (e.g. another allergy):
-  • Use a NEW key with a specific identifier
-  • e.g., if dietary_restriction_shellfish exists,
-    add dietary_restriction_dairy as a new key
+Good: budget_maximum, allergy_shellfish, destination_primary,
+      activity_pace_limit, accommodation_preference
+Bad:  fact1, thing, info, user_said, preference
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUTPUT FORMAT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Return ONLY valid JSON. No explanation. No markdown. No preamble.
-If the response is not valid JSON, the system will break.
 
 {{
   "facts": [
     {{
       "key": "snake_case_identifier",
-      "value": "the fact stated in clear plain English",
+      "value": "complete self-contained plain English statement",
       "category": "constraint | preference | decision | information",
       "priority": "critical | important | contextual"
     }}
@@ -135,7 +157,7 @@ If the response is not valid JSON, the system will break.
 If nothing worth storing: {{"facts": []}}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CURRENT MEMORY STATE (avoid duplicating these)
+CURRENT MEMORY STATE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {current_memory}
@@ -477,6 +499,26 @@ It contains:
 The context is compressed — not everything is shown every turn.
 Trust it completely. Do not assume something does not exist
 just because it is not in the recent conversation turns.
+
+CRITICAL CONSTRAINT HANDLING:
+  When you call a tool and receive results, you MUST check
+  those results against every item in [CRITICAL CONSTRAINTS].
+  
+  If a result conflicts with a critical constraint:
+    → State the conflict explicitly in your response
+    → Do not just list options and ask what to book
+    → The user NEEDS to know about the conflict
+  
+  Example of WRONG behavior:
+    Tool returns: "Sushi Dai — fresh shellfish, very popular"
+    Agent says: "Would you like to book Sushi Dai?"
+    ← WRONG: ignored the shellfish allergy constraint
+  
+  Example of RIGHT behavior:
+    Tool returns: "Sushi Dai — fresh shellfish, very popular"  
+    Agent says: "⚠️ Sushi Dai specializes in shellfish which 
+    conflicts with your allergy. I recommend Odayasu instead."
+    ← RIGHT: checked constraint, flagged conflict, gave alternative
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 YOUR RESPONSIBILITIES

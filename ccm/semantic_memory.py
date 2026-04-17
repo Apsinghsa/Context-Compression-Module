@@ -21,6 +21,8 @@
 # but different collections (like different tables in a database).
 
 import os
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY"] = "False"
 import uuid
 from datetime import datetime
 from typing import Optional

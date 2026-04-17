@@ -28,6 +28,8 @@
 #   Works identically for any agent domain.
 
 import os
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY"] = "False"
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -291,28 +293,46 @@ class EpisodicMemory:
 
     def mark_stale_by_content(self, substring: str) -> int:
         """
-        Mark all entries containing a substring as stale.
-        Stale entries are excluded from future retrieval.
+        Mark all entries containing ANY word from substring as stale.
         
-        Called by StaleDetector when user cancels something.
+        KEY CHANGE: Instead of matching the full substring,
+        we extract significant words and match any of them.
+        This handles cases where the cancelled value phrase
+        differs from the stored memory text.
         
         Example:
-          When user says "forget Bali":
-          mark_stale_by_content("Bali")
-          → All episodic memories mentioning Bali are hidden
-          → Future retrieval never surfaces Bali information
-        
-        Parameters:
-          substring: The cancelled topic/place/concept
-        
-        Returns:
-          Number of entries marked stale
+        cancelled value: "Bali beach vacation"
+        stored memory:   "Researched Bali resorts..."
+        "Bali" is the significant word → matches correctly
         """
         if self.collection.count() == 0:
             return 0
 
+        # Extract significant words (ignore common words)
+        stop_words = {
+            'a', 'an', 'the', 'is', 'are', 'was', 'were',
+            'and', 'or', 'but', 'in', 'on', 'at', 'to',
+            'for', 'of', 'with', 'by', 'from', 'trip',
+            'plan', 'planned', 'vacation', 'holiday'
+        }
+        
+        words = substring.lower().split()
+        significant_words = [
+            w.strip('.,!?') for w in words
+            if w.strip('.,!?') not in stop_words
+            and len(w.strip('.,!?')) > 3
+        ]
+        
+        if not significant_words:
+            # Fall back to full substring if no significant words
+            significant_words = [substring.lower()]
+        
+        print(
+            f"[EpisodicMemory] Marking stale entries containing: "
+            f"{significant_words}"
+        )
+
         try:
-            # Get ALL entries to scan
             all_entries = self.collection.get(
                 include=["documents", "metadatas"]
             )
@@ -325,16 +345,15 @@ class EpisodicMemory:
         ids = all_entries.get("ids", [])
 
         stale_count = 0
-        substring_lower = substring.lower()
 
         for doc, meta, entry_id in zip(documents, metadatas, ids):
-            # Check if this entry mentions the cancelled thing
-            if substring_lower in doc.lower():
-                # Already stale? Skip.
+            doc_lower = doc.lower()
+            
+            # Check if ANY significant word appears in the document
+            if any(word in doc_lower for word in significant_words):
                 if meta.get("stale", False):
                     continue
 
-                # Mark as stale
                 updated_meta = dict(meta)
                 updated_meta["stale"] = True
                 updated_meta["staled_at"] = datetime.now().isoformat()
@@ -353,7 +372,7 @@ class EpisodicMemory:
         if stale_count > 0:
             print(
                 f"[EpisodicMemory] Total marked stale: "
-                f"{stale_count} entries mentioning '{substring}'"
+                f"{stale_count} entries"
             )
 
         return stale_count

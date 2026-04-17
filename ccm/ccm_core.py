@@ -25,6 +25,10 @@
 # anything about memory tiers, ChromaDB, or embeddings.
 
 import os
+# Silence ChromaDB telemetry warnings
+os.environ["ANONYMIZED_TELEMETRY"] = "False"
+os.environ["CHROMA_TELEMETRY"] = "False"
+
 import json
 import tiktoken
 from dotenv import load_dotenv

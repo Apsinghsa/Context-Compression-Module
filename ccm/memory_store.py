@@ -15,6 +15,10 @@
 #   - Enforces a token budget so it cannot overflow context
 
 import os
+
+os.makedirs("data", exist_ok=True)
+os.makedirs("data/chroma_db", exist_ok=True)
+
 import json
 import tiktoken
 from datetime import datetime

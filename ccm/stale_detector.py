@@ -48,45 +48,34 @@ class StaleDetector:
         message_lower = message.lower()
         return any(signal in message_lower for signal in OVERRIDE_SIGNALS)
 
+    
     def check_and_clean(
         self,
         user_message: str,
         working_memory,
-        episodic_memory=None
+        episodic_memory=None,
+        semantic_memory=None  # ADD THIS PARAMETER
     ) -> dict:
         """
-        Check message for overrides and clean memory accordingly.
-
-        Parameters:
-          user_message:    Current user input
-          working_memory:  WorkingMemory instance
-          episodic_memory: Optional EpisodicMemory instance
-                          If provided, marks stale items there too
-
-        Returns:
-          dict with has_override, overridden_keys, reason
+        Check message for overrides and clean ALL memory tiers.
         """
-        # Skip LLM call if no override signals
         if not self._has_override_signal(user_message):
             return {
                 "has_override": False,
                 "overridden_keys": [],
+                "cancelled_values": [],
                 "reason": ""
             }
 
         print("[StaleDetector] Override signal detected, checking...")
 
-        # Get current memory to check against
         current_memory = working_memory.get_all()
 
-        # Build flat view of current facts for the LLM
-        # Just keys and values — LLM does not need full structure
         flat_memory = {}
         for priority in ["critical", "important", "contextual"]:
             for fact in current_memory["facts"][priority]:
                 flat_memory[fact["key"]] = fact["value"]
 
-        # Add decisions and cancelled for completeness
         flat_memory["_decisions"] = current_memory.get("decisions", [])
         flat_memory["_cancelled"] = current_memory.get("cancelled", [])
 
@@ -102,14 +91,11 @@ class StaleDetector:
                     {
                         "role": "system",
                         "content": (
-                            "You detect when users override previous statements. "
-                            "Return only valid JSON."
+                            "You detect when users override previous "
+                            "statements. Return only valid JSON."
                         )
                     },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "user", "content": prompt}
                 ],
                 max_tokens=200,
                 temperature=0.0
@@ -129,33 +115,46 @@ class StaleDetector:
 
             result = json.loads(raw)
 
-            # Apply the overrides to memory
             if result.get("has_override") and result.get("overridden_keys"):
                 overridden = result["overridden_keys"]
+                cancelled_vals = result.get("cancelled_values", [])
+
                 print(f"[StaleDetector] Overriding keys: {overridden}")
 
                 for key in overridden:
-                    # Get the value before removing
-                    # so we can mark it cancelled
                     old_value = working_memory.get(key)
-
-                    # Remove from working memory
                     working_memory.remove_by_key(key)
 
-                    # If the value is meaningful, mark as cancelled
                     if old_value and isinstance(old_value, str):
                         working_memory.add_cancelled(old_value)
 
-                        # Also mark stale in episodic memory if provided
+                        # Mark stale in BOTH episodic and semantic
                         if episodic_memory:
                             count = episodic_memory.mark_stale_by_content(
                                 old_value
                             )
-                            if count > 0:
-                                print(
-                                    f"[StaleDetector] Marked {count} "
-                                    f"episodic memories as stale"
-                                )
+                            print(
+                                f"[StaleDetector] Episodic: "
+                                f"{count} entries marked stale"
+                            )
+
+                        # NEW: Also mark stale in semantic memory
+                        if semantic_memory:
+                            count = semantic_memory.mark_stale_by_content(
+                                old_value
+                            )
+                            print(
+                                f"[StaleDetector] Semantic: "
+                                f"{count} entries marked stale"
+                            )
+
+                # Also mark stale using cancelled_values directly
+                for val in cancelled_vals:
+                    if val and len(val) > 3:
+                        if episodic_memory:
+                            episodic_memory.mark_stale_by_content(val)
+                        if semantic_memory:
+                            semantic_memory.mark_stale_by_content(val)
 
             return result
 
@@ -164,13 +163,14 @@ class StaleDetector:
             return {
                 "has_override": False,
                 "overridden_keys": [],
+                "cancelled_values": [],
                 "reason": ""
             }
-
         except Exception as e:
             print(f"[StaleDetector] Error: {e}")
             return {
                 "has_override": False,
                 "overridden_keys": [],
+                "cancelled_values": [],
                 "reason": ""
             }
