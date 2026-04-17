@@ -16,7 +16,22 @@
         "added_at_turn": 1
       }
     ],
-    "important": [],
+    "important": [
+      {
+        "key": "accommodation_style_preference",
+        "value": "preferably traditional style",
+        "category": "preference",
+        "priority": "important",
+        "added_at_turn": 6
+      },
+      {
+        "key": "budget_food_per_day",
+        "value": "budget for food per day in Japan",
+        "category": "preference",
+        "priority": "important",
+        "added_at_turn": 12
+      }
+    ],
     "contextual": [
       {
         "key": "trip_duration",
@@ -38,12 +53,33 @@
         "category": "information",
         "priority": "contextual",
         "added_at_turn": 4
+      },
+      {
+        "key": "question_train_cost",
+        "value": "How much does the Shinkansen bullet train cost?",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 8
+      },
+      {
+        "key": "transportation_summary",
+        "value": "Summarize the transportation options between cities",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 14
+      },
+      {
+        "key": "dietary_requirement",
+        "value": "no dietary requirements mentioned",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 15
       }
     ]
   },
   "decisions": [],
   "cancelled": [],
-  "turn_count": 5,
+  "turn_count": 15,
   "conversation_id": "",
-  "last_updated": "2026-04-17T20:10:06.974227"
+  "last_updated": "2026-04-17T20:16:53.243063"
 }
