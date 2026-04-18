@@ -440,35 +440,63 @@ class CCMAgent:
             # Each tool result is compressed by CCM before use
             max_tool_rounds = 5  # Prevent infinite loops
             tool_round = 0
+# ── Step 4: Handle tool calls ────────────────────────
+            max_tool_rounds = 5 
+            tool_round = 0
+
+            # 1. Initialize the message list ONCE outside the loop
+            tool_messages = messages.copy()
 
             while (
                 response.choices[0].finish_reason == "tool_calls"
                 and tool_round < max_tool_rounds
             ):
                 tool_round += 1
-                tool_calls = response.choices[0].message.tool_calls
+                assistant_message = response.choices[0].message
+                tool_calls = assistant_message.tool_calls
 
-                # Build a mini message list for this tool round
-                # We keep it SHORT — only system + context + tool results
-                # Not the full history like baseline does
-                tool_messages = messages.copy()
-                tool_messages.append({
-                    "role": "assistant",
-                    "content": (
-                        response.choices[0].message.content or ""
-                    ),
-                    "tool_calls": [
-                        {
-                            "id": tc.id,
-                            "type": "function",
-                            "function": {
-                                "name": tc.function.name,
-                                "arguments": tc.function.arguments
-                            }
-                        }
-                        for tc in tool_calls
-                    ]
-                })
+                # 2. Append the assistant's tool_calls request to the history
+                tool_messages.append(assistant_message)
+
+                # Execute each tool
+                for tool_call in tool_calls:
+                    tool_name = tool_call.function.name
+                    tool_args = json.loads(tool_call.function.arguments)
+
+                    print(f"  [CCMAgent] Tool call: {tool_name}({tool_args})")
+
+                    # Execute the tool and compress result via CCM
+                    raw_result, query_used = execute_tool(tool_name, tool_args)
+                    compressed_result = self.ccm.process_tool_result(
+                        tool_name=tool_name,
+                        raw_result=raw_result,
+                        query_used=query_used
+                    )
+
+                    tool_calls_this_turn.append({
+                        "tool": tool_name,
+                        "args": tool_args,
+                        "result_preview": compressed_result[:100],
+                        "compressed_result": compressed_result,
+                        "raw_result": raw_result,
+                    })
+
+                    # 3. Append the COMPRESSED tool result to the running history
+                    tool_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call.id,
+                        "content": compressed_result
+                    })
+
+                # 4. Call LLM again with the CUMULATIVE tool_messages history
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=tool_messages,
+                    tools=TOOL_DEFINITIONS,
+                    tool_choice="auto",
+                    max_tokens=1024,
+                    temperature=0.0
+                )
 
                 # Execute each tool
                 for tool_call in tool_calls:

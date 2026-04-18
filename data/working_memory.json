@@ -2,11 +2,61 @@
   "facts": {
     "critical": [],
     "important": [],
-    "contextual": []
+    "contextual": [
+      {
+        "key": "travel_destination_primary",
+        "value": "Tokyo",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 1
+      },
+      {
+        "key": "travel_origin_primary",
+        "value": "New York",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 1
+      },
+      {
+        "key": "travel_month_primary",
+        "value": "June",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 1
+      },
+      {
+        "key": "dietary_requirement_shellfish",
+        "value": "None mentioned",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 2
+      },
+      {
+        "key": "budget_maximum",
+        "value": "None mentioned",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 2
+      },
+      {
+        "key": "medical_condition_affecting_travel",
+        "value": "None mentioned",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 2
+      },
+      {
+        "key": "safety_requirement",
+        "value": "None mentioned",
+        "category": "information",
+        "priority": "contextual",
+        "added_at_turn": 2
+      }
+    ]
   },
   "decisions": [],
   "cancelled": [],
-  "turn_count": 0,
+  "turn_count": 5,
   "conversation_id": "",
-  "last_updated": ""
+  "last_updated": "2026-04-19T00:04:13.666371"
 }
